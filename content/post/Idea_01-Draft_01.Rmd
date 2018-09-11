@@ -69,10 +69,10 @@ saveRDS(coincept_data, "data/coincept_data.rds")
 ```{r data}
 library(tidyverse)
 #ugly ass file path, but will deal with later
-coincept_data = read_rds("../../../Coincept/data/coincept_data.rds")
+coinmetric_data = read_rds("../../../Coincept/data/coinmetric_data.rds")
 
 
-df = coincept_data %>% 
+df = coinmetric_data %>% 
   select(date, result, metric) %>% 
   filter(metric %in% c("exchangevolume(usd)", "txvolume(usd)"))  %>% 
   spread(metric, result) %>% 
@@ -83,7 +83,7 @@ df = coincept_data %>%
 
 This gives us a dataset with all these metrics for a year since we set `start_date` to year. There's also a `number_of` argument in the `to_unix` function so you can just do `start_date = to_unix("year", number_of = 5)` to get the last 5 years of data or whatever.  
 ```{r data look}
-unique(coincept_data$metric)
+unique(coinmetric_data$metric)
 ```
 
 #Initial plots 
