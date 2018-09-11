@@ -120,17 +120,17 @@ coincept_data = map_df(coincept_metrics, function(metric){
 saveRDS(coincept_data, &quot;data/coincept_data.rds&quot;)</code></pre>
 <pre class="r"><code>library(tidyverse)
 #ugly ass file path, but will deal with later
-coincept_data = read_rds(&quot;../../../Coincept/data/coincept_data.rds&quot;)
+coinmetric_data = read_rds(&quot;../../../Coincept/data/coinmetric_data.rds&quot;)
 
 
-df = coincept_data %&gt;% 
+df = coinmetric_data %&gt;% 
   select(date, result, metric) %&gt;% 
   filter(metric %in% c(&quot;exchangevolume(usd)&quot;, &quot;txvolume(usd)&quot;))  %&gt;% 
   spread(metric, result) %&gt;% 
   set_names(snakecase::to_snake_case) %&gt;% 
   mutate(exchange_over_volume = exchangevolume_usd / txvolume_usd)</code></pre>
 <p>This gives us a dataset with all these metrics for a year since we set <code>start_date</code> to year. There’s also a <code>number_of</code> argument in the <code>to_unix</code> function so you can just do <code>start_date = to_unix(&quot;year&quot;, number_of = 5)</code> to get the last 5 years of data or whatever.</p>
-<pre class="r"><code>unique(coincept_data$metric)</code></pre>
+<pre class="r"><code>unique(coinmetric_data$metric)</code></pre>
 <pre><code>##  [1] &quot;txcount&quot;               &quot;txvolume(usd)&quot;        
 ##  [3] &quot;adjustedtxvolume(usd)&quot; &quot;averagedifficulty&quot;    
 ##  [5] &quot;mediantxvalue(usd)&quot;    &quot;blocksize&quot;            
