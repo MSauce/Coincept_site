@@ -6,20 +6,20 @@
     <description>Recent content on Coincept drafts</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 10 Sep 2018 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 11 Sep 2018 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Initial Coincept Draft</title>
-      <link>/2018/09/10/initial-coincept-draft/</link>
-      <pubDate>Mon, 10 Sep 2018 00:00:00 +0000</pubDate>
+      <link>/2018/09/11/initial-coincept-draft/</link>
+      <pubDate>Tue, 11 Sep 2018 00:00:00 +0000</pubDate>
       
-      <guid>/2018/09/10/initial-coincept-draft/</guid>
+      <guid>/2018/09/11/initial-coincept-draft/</guid>
       <description>Here’s the code that fetches the data:
-From the coincept repo &amp;quot;code/get_data/fetch_coincept.R&amp;quot;
-helpers = unique(fs::dir_info(&amp;quot;code/functions/&amp;quot;)$path) walk(helpers, ~source(.x)) ##now do em all coincept_metrics = c(&amp;quot;txcount&amp;quot;, &amp;quot;txvolume(usd)&amp;quot;, &amp;quot;adjustedtxvolume(usd)&amp;quot;, &amp;quot;averagedifficulty&amp;quot;, &amp;quot;mediantxvalue(usd)&amp;quot;, &amp;quot;blocksize&amp;quot;, &amp;quot;blockcount&amp;quot;, &amp;quot;price(usd)&amp;quot;, &amp;quot;marketcap(usd)&amp;quot;, &amp;quot;exchangevolume(usd)&amp;quot;) coincept_data = map_df(coincept_metrics, function(metric){ json = fetch_json(api_base = &amp;quot;https://coinmetrics.io/api/v1/&amp;quot;, endpoint = &amp;quot;get_asset_data_for_time_range&amp;quot;, first_parameter = &amp;quot;btc&amp;quot;, second_parameter = metric, start_date = to_unix(&amp;quot;year&amp;quot;), end_date = to_unix(&amp;quot;today&amp;quot;) ) out = tibble( unix_date = tx_count %&amp;gt;% flatten %&amp;gt;% map_dbl(magrittr::extract2, 1), date_time = lubridate::as_datetime(unix_date), date = as.</description>
+From the coincept repo &amp;quot;code/get_data/fetch_coinmetrics.R&amp;quot;
+#this little thing with just source all the functions instead of explicilty typing them out each time helpers = unique(fs::dir_info(&amp;quot;code/functions/&amp;quot;)$path) #its just saying source(equivalent to pasting it into your console) everything in the directory (code/functions) walk(helpers, ~source(.x)) ##now do em all coincept_metrics = c(&amp;quot;txcount&amp;quot;, &amp;quot;txvolume(usd)&amp;quot;, &amp;quot;adjustedtxvolume(usd)&amp;quot;, &amp;quot;averagedifficulty&amp;quot;, &amp;quot;mediantxvalue(usd)&amp;quot;, &amp;quot;blocksize&amp;quot;, &amp;quot;blockcount&amp;quot;, &amp;quot;price(usd)&amp;quot;, &amp;quot;marketcap(usd)&amp;quot;, &amp;quot;exchangevolume(usd)&amp;quot;) coinmetrics_data = map_df(coinmetrics_metrics, function(metric){ ##the map_df here line is essentially a for loop #here&amp;#39;s a kinda silly example: https://blog.</description>
     </item>
     
     <item>

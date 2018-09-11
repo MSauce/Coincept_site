@@ -14,12 +14,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Here's the code that fetches the data: 
 
-From the coincept repo `"code/get_data/fetch_coincept.R"`
+From the coincept repo `"code/get_data/fetch_coinmetrics.R"`
 ```{r  eval=FALSE, echo=TRUE}
+#this little thing with just source all the functions instead of explicilty typing them out each time
 helpers = unique(fs::dir_info("code/functions/")$path)
 
+#its just saying source(equivalent to pasting it into your console) everything in the directory (code/functions)
 walk(helpers, ~source(.x))
-
+  
 ##now do em all 
 coincept_metrics = c("txcount",
                         "txvolume(usd)",
@@ -33,37 +35,97 @@ coincept_metrics = c("txcount",
                         "exchangevolume(usd)")
 
 
-coincept_data = map_df(coincept_metrics, function(metric){
-  json = fetch_json(api_base = "https://coinmetrics.io/api/v1/",
+coinmetrics_data = map_df(coinmetrics_metrics, function(metric){
+  ##the map_df here line is essentially a for loop 
+      #here's a kinda silly example: https://blog.rmhogervorst.nl/blog/2018/09/10/use-purrr-to-feed-four-cats/
+      # for a fuller read on map and other purrr functions go here: https://jennybc.github.io/purrr-tutorial/index.html
+  
+  #but, essentially we are looping over everything in coinmetrics_metrics with anonynmous function
+  
+  #so, you could just use this code to go and get other metrics or whatever. 
+  
+  #anything in the vector that we are passing to map (i.e. coinmetrics_metrics in our case) will be used
+  
+  
+  
+  json = fetch_json(##json here is the returned list from the api call.
+                    api_base = "https://coinmetrics.io/api/v1/",
                     endpoint = "get_asset_data_for_time_range",
                     first_parameter = "btc",
-                    second_parameter = metric,
-                    start_date = to_unix("year"),
+                    second_parameter = metric, #here is where we put the `metric` from the anonmyous function
+                    start_date = to_unix("year", #start_date will take "year(s)"/"month(s)"/"day(s)"
+                                                 #I wrote the function to basically do a regex for year/month/day
+                                                 #so years/months/days should work as well
+                                                 #or, it can take a date as a number
+                                         number_of = 8), #can change number_of to whatever 
+                    #so if you wanted 2 years you'd do:
+                    # start_date = to_unix("years",
+                    #                      number_of = 2),
+                    #if you just wanted the last year
+                    # start_date = to_unix("years",
+                    #                      number_of = 1), 
+                    
+                    #important to note that in `to_unix` time is alwawys calculated relative to today
+                    #so, end_date is kinda worthless here. 
+                    #I.e. if you did `start_date = to_unix("year")` and then,
+                    #end_date = to_unix(1/1/18) you would get an error OR WORSE not an error, but dates
+                    #that don't line up with what you are expecting. 
+                    #so, it's best to have `end_date` always set to "today"
+                    #If you aren't interested in recent days, or whatever, 
+                    #we can always just filter them out later
                     end_date = to_unix("today")
   ) 
   
+  #out takes the json info as a list and converts it to a dataframe
+  #(tibble is tidyvere's way of doing as.data.frame.)
+  #if we did as.data.frame, it would still work, but tibbles have nicer formatting and handles some stuff
+  #under the hood well
   out = 
     tibble(
-      unix_date = tx_count %>% 
-        flatten %>% 
+      unix_date = json %>% 
+        flatten %>% #flatten the list to remove an extra layer that comes as the json
         map_dbl(magrittr::extract2, 1),
+      #here map_dbl is used to extract every 1st element of the list
+      #so this is saying, for every element in the list (json %>% flatten %>% map(dbl)),
+      #extract the first element 
+      #the magrittr::extract2 is just a shortcut for double brackets
+      #do ?magrittr::extract2 and you will see the range of helper functions so you don't have to pass 
+      #`[[ x ]]` or something like it. They are really handy 
       date_time = lubridate::as_datetime(unix_date),
-      date = as.Date(date_time),
+      #this just formats the unix date as a readable datetime object
+      date = as.Date(date_time), 
+      #removes the time
       year = str_extract(date, "^...."),
+      #does string extracting to extract the year
       month = str_extract(date, "(?=-)(.*)(?<=-)") %>% 
+        #does some regexing to get month 
+        #date is formatted like YYYY-(mm)-DD 
+        #NOTE: that if this changes this will be wrong
+        #it is looking for whatever after the - and then before the -
+        #then it pipes that to str_remove_all which just removes and non-digit characters
         str_remove_all(., "\\D"),
+      
+      #get last two characters from date for the day
       day = str_extract(date, "..$"),
-      result = tx_count %>% 
+      result = json %>% 
         flatten %>% 
         map_dbl(magrittr::extract2, 2),
+      #same concept here as above. For every element in the list extract the 2nd value
       metric = paste0(metric)
+      #^^this is important becuase the json doesn't actually give you the metric you are accessing
+      #it just gives you date and result 
+      #so we do paste0(metric) which is just pasting the value from the anonymous function in a column 
+      #we can use to filter on later and just keeps thing tidy
     )
-
+  
+  #since we are making two objects (json and out) it needs to know what to return
+  #basically, we are making `out` for every metric and 
+  #map_df just binds all the rows from all the versions of `out` together into one big dataframe (tibble)
   return(out)  
 })
 
-saveRDS(coincept_data, "data/coincept_data.rds")
 
+saveRDS(coinmetrics_data, "data/coinmetric_data.rds")
 ```
 
 ```{r data}
