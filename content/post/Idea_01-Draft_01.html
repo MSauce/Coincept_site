@@ -1,0 +1,112 @@
+---
+title: "Initial Coincept Draft"
+author: "CN"
+date: "2018-09-10"
+output: html_document
+---
+
+
+
+<p>Here’s the code that fetches the data:</p>
+<p>From the coincept repo <code>&quot;code/get_data/fetch_coincept.R&quot;</code></p>
+<pre class="r"><code>helpers = unique(fs::dir_info(&quot;code/functions/&quot;)$path)
+
+walk(helpers, ~source(.x))
+
+##now do em all 
+coincept_metrics = c(&quot;txcount&quot;,
+                        &quot;txvolume(usd)&quot;,
+                        &quot;adjustedtxvolume(usd)&quot;,
+                        &quot;averagedifficulty&quot;,
+                        &quot;mediantxvalue(usd)&quot;,
+                        &quot;blocksize&quot;,
+                        &quot;blockcount&quot;,
+                        &quot;price(usd)&quot;,
+                        &quot;marketcap(usd)&quot;,
+                        &quot;exchangevolume(usd)&quot;)
+
+
+coincept_data = map_df(coincept_metrics, function(metric){
+  json = fetch_json(api_base = &quot;https://coinmetrics.io/api/v1/&quot;,
+                    endpoint = &quot;get_asset_data_for_time_range&quot;,
+                    first_parameter = &quot;btc&quot;,
+                    second_parameter = metric,
+                    start_date = to_unix(&quot;year&quot;),
+                    end_date = to_unix(&quot;today&quot;)
+  ) 
+  
+  out = 
+    tibble(
+      unix_date = tx_count %&gt;% 
+        flatten %&gt;% 
+        map_dbl(magrittr::extract2, 1),
+      date_time = lubridate::as_datetime(unix_date),
+      date = as.Date(date_time),
+      year = str_extract(date, &quot;^....&quot;),
+      month = str_extract(date, &quot;(?=-)(.*)(?&lt;=-)&quot;) %&gt;% 
+        str_remove_all(., &quot;\\D&quot;),
+      day = str_extract(date, &quot;..$&quot;),
+      result = tx_count %&gt;% 
+        flatten %&gt;% 
+        map_dbl(magrittr::extract2, 2),
+      metric = paste0(metric)
+    )
+
+  return(out)  
+})
+
+saveRDS(coincept_data, &quot;data/coincept_data.rds&quot;)</code></pre>
+<pre class="r"><code>library(tidyverse)
+#ugly ass file path, but will deal with later
+coincept_data = read_rds(&quot;../../../Coincept/data/coincept_data.rds&quot;)
+
+
+df = coincept_data %&gt;% 
+  select(date, result, metric) %&gt;% 
+  filter(metric %in% c(&quot;exchangevolume(usd)&quot;, &quot;txvolume(usd)&quot;))  %&gt;% 
+  spread(metric, result) %&gt;% 
+  set_names(snakecase::to_snake_case) %&gt;% 
+  mutate(exchange_over_volume = exchangevolume_usd / txvolume_usd)</code></pre>
+<p>This gives us a dataset with all these metrics for a year since we set <code>start_date</code> to year. There’s also a <code>number_of</code> argument in the <code>to_unix</code> function so you can just do <code>start_date = to_unix(&quot;year&quot;, number_of = 5)</code> to get the last 5 years of data or whatever.</p>
+<pre class="r"><code>unique(coincept_data$metric)</code></pre>
+<pre><code>##  [1] &quot;txcount&quot;               &quot;txvolume(usd)&quot;        
+##  [3] &quot;adjustedtxvolume(usd)&quot; &quot;averagedifficulty&quot;    
+##  [5] &quot;mediantxvalue(usd)&quot;    &quot;blocksize&quot;            
+##  [7] &quot;blockcount&quot;            &quot;price(usd)&quot;           
+##  [9] &quot;marketcap(usd)&quot;        &quot;exchangevolume(usd)&quot;</code></pre>
+<div id="initial-plots" class="section level1">
+<h1>Initial plots</h1>
+<p>To be honest, I’m not sure how to really look at this. Just a couple rough ass plots because I don’t have time rn. It’s complicated since we have three metrics (both volumes and then time).</p>
+<pre class="r"><code>df %&gt;% 
+  ggplot(aes(
+    x = date,
+    y = exchange_over_volume
+  )) + 
+  geom_line() + 
+  # geom_point() +
+  # geom_line(aes(
+  #   group = date
+  # )) + 
+  theme_light() + 
+  ggtitle(&quot;exchange_over_volume&quot;)</code></pre>
+<p><img src="/post/Idea_01-Draft_01_files/figure-html/plots-1.png" width="768" /></p>
+<pre class="r"><code>df %&gt;% 
+  gather(metric, result, ends_with(&quot;_usd&quot;)) %&gt;% 
+  ggplot(aes(
+    x = date,
+    y = result,
+    group = metric
+  )) + 
+  geom_line(aes(
+    color = metric
+  )) + 
+  #scale_y_continuous(scales::comma)  + 
+  theme_light() + 
+  ggtitle(&quot;exchange and volume&quot;) + 
+  theme(legend.position = &quot;bottom&quot;)</code></pre>
+<p><img src="/post/Idea_01-Draft_01_files/figure-html/plots2-1.png" width="768" /></p>
+<!-- ##Code appendix -->
+<!-- ```{r code = readLines(knitr::purl(rmd)), echo = TRUE, eval=FALSE} -->
+<!-- #paste all R code used down here -->
+<!-- ``` -->
+</div>

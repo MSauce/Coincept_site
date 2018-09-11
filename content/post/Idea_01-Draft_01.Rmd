@@ -1,0 +1,132 @@
+---
+title: "Initial Coincept Draft"
+author: "CN"
+date: "`r format(Sys.Date())`"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning =  FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Here's the code that fetches the data: 
+
+From the coincept repo `"code/get_data/fetch_coincept.R"`
+```{r  eval=FALSE, echo=TRUE}
+helpers = unique(fs::dir_info("code/functions/")$path)
+
+walk(helpers, ~source(.x))
+
+##now do em all 
+coincept_metrics = c("txcount",
+                        "txvolume(usd)",
+                        "adjustedtxvolume(usd)",
+                        "averagedifficulty",
+                        "mediantxvalue(usd)",
+                        "blocksize",
+                        "blockcount",
+                        "price(usd)",
+                        "marketcap(usd)",
+                        "exchangevolume(usd)")
+
+
+coincept_data = map_df(coincept_metrics, function(metric){
+  json = fetch_json(api_base = "https://coinmetrics.io/api/v1/",
+                    endpoint = "get_asset_data_for_time_range",
+                    first_parameter = "btc",
+                    second_parameter = metric,
+                    start_date = to_unix("year"),
+                    end_date = to_unix("today")
+  ) 
+  
+  out = 
+    tibble(
+      unix_date = tx_count %>% 
+        flatten %>% 
+        map_dbl(magrittr::extract2, 1),
+      date_time = lubridate::as_datetime(unix_date),
+      date = as.Date(date_time),
+      year = str_extract(date, "^...."),
+      month = str_extract(date, "(?=-)(.*)(?<=-)") %>% 
+        str_remove_all(., "\\D"),
+      day = str_extract(date, "..$"),
+      result = tx_count %>% 
+        flatten %>% 
+        map_dbl(magrittr::extract2, 2),
+      metric = paste0(metric)
+    )
+
+  return(out)  
+})
+
+saveRDS(coincept_data, "data/coincept_data.rds")
+
+```
+
+```{r data}
+library(tidyverse)
+#ugly ass file path, but will deal with later
+coincept_data = read_rds("../../../Coincept/data/coincept_data.rds")
+
+
+df = coincept_data %>% 
+  select(date, result, metric) %>% 
+  filter(metric %in% c("exchangevolume(usd)", "txvolume(usd)"))  %>% 
+  spread(metric, result) %>% 
+  set_names(snakecase::to_snake_case) %>% 
+  mutate(exchange_over_volume = exchangevolume_usd / txvolume_usd)
+
+```
+
+This gives us a dataset with all these metrics for a year since we set `start_date` to year. There's also a `number_of` argument in the `to_unix` function so you can just do `start_date = to_unix("year", number_of = 5)` to get the last 5 years of data or whatever.  
+```{r data look}
+unique(coincept_data$metric)
+```
+
+#Initial plots 
+
+To be honest, I'm not sure how to really look at this. Just a couple rough ass plots because I don't have time rn. It's complicated since we have three metrics (both volumes and then time).
+
+```{r plots, fig.align='c', fig.width=8, fig.height=6}
+df %>% 
+  ggplot(aes(
+    x = date,
+    y = exchange_over_volume
+  )) + 
+  geom_line() + 
+  # geom_point() +
+  # geom_line(aes(
+  #   group = date
+  # )) + 
+  theme_light() + 
+  ggtitle("exchange_over_volume")
+```
+
+```{r plots2, fig.align='c', fig.width=8, fig.height=6}
+df %>% 
+  gather(metric, result, ends_with("_usd")) %>% 
+  ggplot(aes(
+    x = date,
+    y = result,
+    group = metric
+  )) + 
+  geom_line(aes(
+    color = metric
+  )) + 
+  #scale_y_continuous(scales::comma)  + 
+  theme_light() + 
+  ggtitle("exchange and volume") + 
+  theme(legend.position = "bottom")
+
+```
+
+
+
+
+<!-- ##Code appendix -->
+<!-- ```{r code = readLines(knitr::purl(rmd)), echo = TRUE, eval=FALSE} -->
+<!-- #paste all R code used down here -->
+<!-- ``` -->
